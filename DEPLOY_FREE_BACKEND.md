@@ -9,7 +9,7 @@
 3. 保持 `nasdaq-add-dashboard-backend` 为 Free，点击创建。
 4. 创建完成后打开 Render 分配的 `https://…onrender.com/` 地址；页面与 `/api/status` 在同一域名，点击“联网更新”会在云端执行采集。
 
-也可以使用 Render 的 Deploy to Render 流程：<https://render.com/deploy>。首次连接 GitHub/Render 账号仍需要用户本人完成授权。
+也可以直接打开仓库专用入口：<https://render.com/deploy?repo=https://github.com/ly11133/nasdaq-add-dashboard>。首次连接 GitHub/Render 账号仍需要用户本人完成授权。
 
 ## 免费计划边界
 
