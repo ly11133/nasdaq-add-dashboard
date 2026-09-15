@@ -1,0 +1,18 @@
+{
+  "instructions": "模板不含示例行情。填写真实授权数据后导入。records 不能为空。所有数据必须 index=NDX；available_at 是来源实际首次可用日期，应用次日才使用。不得把下载日回填成历史发布日。",
+  "fields": {
+    "metric": "forward_pe | ttm_pe | eps_estimate | breadth",
+    "value": "真实数值；宽度为0至1",
+    "date": "YYYY-MM-DD 观察日期",
+    "available_at": "YYYY-MM-DD 实际首次可用日期",
+    "provider": "供应商名称",
+    "basis": "固定指数聚合计算口径，不同口径不可拼接",
+    "source_url": "https 来源链接",
+    "index": "NDX",
+    "fiscal_year": "EPS必填：整数预测财政年；修正需要同一财年3个月前和当前快照",
+    "currency": "EPS必填：例如USD",
+    "membership_date": "宽度必填：必须等于观察日期",
+    "coverage": "宽度必填：1，代表当日全部成员均已覆盖"
+  },
+  "records": []
+}
