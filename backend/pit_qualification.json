@@ -1,0 +1,138 @@
+{
+  "contract_version": "PIT_DATA_CONTRACT_V1",
+  "as_of_rule": "available_at <= as_of_datetime",
+  "unknown_availability_rule": "available_at is null or unproven => score_eligible=false",
+  "default_policy": "Do not promote a downloaded value to formal scoring solely because observation_date is before as_of.",
+  "series": [
+    {
+      "series_id": "NDX_CLOSE",
+      "label": "Nasdaq-100收盘指数",
+      "metric": "close",
+      "unit": "index_points",
+      "classification": "PIT_PROXY",
+      "score_eligible": false,
+      "live_observation_allowed": true,
+      "reason": "FRED/Yahoo current historical series has no immutable publication vintage; new fetches are archived from retrieval time onward."
+    },
+    {
+      "series_id": "NDX_VXN",
+      "label": "Nasdaq-100波动率VXN",
+      "metric": "volatility",
+      "unit": "percent",
+      "classification": "PIT_PROXY",
+      "score_eligible": false,
+      "live_observation_allowed": true,
+      "reason": "Current FRED history has no per-observation publication/availability timestamp."
+    },
+    {
+      "series_id": "VIX",
+      "label": "VIX背景波动率",
+      "metric": "volatility",
+      "unit": "percent",
+      "classification": "PIT_PROXY",
+      "score_eligible": false,
+      "live_observation_allowed": true,
+      "reason": "Current FRED history has no per-observation publication/availability timestamp."
+    },
+    {
+      "series_id": "US10Y_REAL",
+      "label": "美国10年实际利率",
+      "metric": "real_yield",
+      "unit": "percent",
+      "classification": "PIT_PROXY",
+      "score_eligible": false,
+      "live_observation_allowed": true,
+      "reason": "FRED current history may contain later revisions and does not prove the original release time."
+    },
+    {
+      "series_id": "US_NFCI",
+      "label": "芝加哥金融条件NFCI",
+      "metric": "financial_conditions",
+      "unit": "index_points",
+      "classification": "PIT_PROXY",
+      "score_eligible": false,
+      "live_observation_allowed": true,
+      "reason": "ALFRED vintage date is captured, but intraday publication/availability time is not certified."
+    },
+    {
+      "series_id": "NDX_FORWARD_PE",
+      "label": "Nasdaq-100 Forward PE",
+      "metric": "forward_pe",
+      "unit": "multiple",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "No independently auditable per-observation first-available timestamp and fixed index aggregation vintage."
+    },
+    {
+      "series_id": "NDX_FORWARD_PE_OWN",
+      "label": "Nasdaq-100提供商自算Forward PE",
+      "metric": "forward_pe",
+      "unit": "multiple",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "Provider-specific FY1/FY2 series is a separate methodology and cannot be spliced into terminal Forward PE."
+    },
+    {
+      "series_id": "NDX_FORWARDOWN",
+      "label": "Nasdaq-100提供商自算Forward PE（旧归档别名）",
+      "metric": "forward_pe",
+      "unit": "multiple",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "Legacy Phase 1A archive alias; retained for audit and never merged with the terminal Forward PE series."
+    },
+    {
+      "series_id": "NDX_TTM_PE",
+      "label": "Nasdaq-100 TTM PE",
+      "metric": "ttm_pe",
+      "unit": "multiple",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "Provider history and aggregation methodology are not independently certified as point-in-time."
+    },
+    {
+      "series_id": "NDX_FORWARD_EPS",
+      "label": "Nasdaq-100 Forward EPS",
+      "metric": "forward_eps",
+      "unit": "index_eps",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "Rolling provider EPS index is not a same-fiscal-year consensus estimate history."
+    },
+    {
+      "series_id": "NDX_TTM_EPS_INDEX",
+      "label": "Nasdaq-100已实现EPS指数",
+      "metric": "ttm_eps_index",
+      "unit": "index_base_100",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "Provider indexed history is retained for context and is not a dollar EPS or analyst revision series."
+    },
+    {
+      "series_id": "NDX_EPS_REVISION",
+      "label": "同财政期EPS修正",
+      "metric": "eps_revision",
+      "unit": "percent",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "No verified two-date same-fiscal-period index consensus snapshots."
+    },
+    {
+      "series_id": "NDX_BREADTH_MA200",
+      "label": "NDX成分站上MA200比例",
+      "metric": "breadth",
+      "unit": "fraction",
+      "classification": "CANDIDATE_ONLY",
+      "score_eligible": false,
+      "live_observation_allowed": false,
+      "reason": "Public history uses current constituents and cannot prove historical membership and denominator."
+    }
+  ]
+}

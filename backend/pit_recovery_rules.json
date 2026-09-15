@@ -1,0 +1,98 @@
+{
+  "schema_version": "PIT_RECOVERY_AUDIT_V1",
+  "rule_set_version": "PIT_RECOVERY_RULES_V1",
+  "series": [
+    {
+      "series_id": "NDX_CLOSE",
+      "provider": "Nasdaq, Inc. via FRED",
+      "historical_source": "FRED NASDAQ100 (NASDAQ Daily Index Data)",
+      "revision_behavior": "FRED series notes say all data are subject to revision; the current CSV is not an immutable historical vintage archive.",
+      "publication_semantics": "FRED identifies the source and the daily close, but the downloaded current history does not carry an observation-level first-publication timestamp.",
+      "market_close_semantics": "Daily close; FRED notes the Nasdaq-100 market typically closes at 4 PM ET and can close early on holidays.",
+      "vintage_support": "No verified per-observation historical vintage is stored by the current free collector; FRED current-history download alone is insufficient.",
+      "candidate_available_at_rule": "No historical promotion rule. Keep available_at NULL for bulk history; only a contemporaneous collector run may use its retrieved_at as OBSERVED_LIVE.",
+      "can_upgrade_historical": false,
+      "classification": "PROXY_ONLY",
+      "confidence": "high",
+      "evidence": [
+        {"url": "https://fred.stlouisfed.org/series/NASDAQ100", "claim": "Nasdaq source, daily close, typical 4 PM ET close, and explicit revision warning."},
+        {"url": "https://fred.stlouisfed.org/docs/api/fred/series_observations.html", "claim": "FRED exposes real-time/vintage parameters, so current history without a selected historical real-time period is not itself a vintage proof."}
+      ],
+      "rule_version": "NDX_CLOSE_RULE_V1"
+    },
+    {
+      "series_id": "VIX",
+      "provider": "Cboe via FRED",
+      "historical_source": "FRED VIXCLS (CBOE Market Statistics)",
+      "revision_behavior": "FRED page carries an all-data-subject-to-revision warning; no immutable first-available timestamp is present in the current free CSV.",
+      "publication_semantics": "Daily close observation is identified, but FRED retrieval/update time is not the Cboe publication time for each historical observation.",
+      "market_close_semantics": "Daily close; the series page does not certify a universal timestamp for historical publication to market participants.",
+      "vintage_support": "No verified observation-level vintage is stored by the current collector.",
+      "candidate_available_at_rule": "No historical promotion rule; retain bulk history as HISTORICAL_PROXY and use retrieved_at only for a same-run OBSERVED_LIVE row.",
+      "can_upgrade_historical": false,
+      "classification": "PROXY_ONLY",
+      "confidence": "high",
+      "evidence": [
+        {"url": "https://fred.stlouisfed.org/series/VIXCLS", "claim": "Cboe source, daily close, and FRED revision warning."},
+        {"url": "https://fred.stlouisfed.org/docs/api/fred/realtime_period.html", "claim": "ALFRED real-time periods describe what was known by a past period, but a current-history fetch does not supply that historical cutoff."}
+      ],
+      "rule_version": "VIX_RULE_V1"
+    },
+    {
+      "series_id": "NDX_VXN",
+      "provider": "Cboe via FRED",
+      "historical_source": "FRED VXNCLS (CBOE NASDAQ-100 Volatility Index)",
+      "revision_behavior": "FRED page carries an all-data-subject-to-revision warning; current free history lacks an immutable first-available timestamp.",
+      "publication_semantics": "Daily close is identified, but no historical observation-level release timestamp is captured by the current collector.",
+      "market_close_semantics": "Daily close; a stable historical publication timestamp is not certified by the downloaded CSV.",
+      "vintage_support": "No verified observation-level vintage is stored by the current collector.",
+      "candidate_available_at_rule": "No historical promotion rule; retain bulk history as HISTORICAL_PROXY and use retrieved_at only for a same-run OBSERVED_LIVE row.",
+      "can_upgrade_historical": false,
+      "classification": "PROXY_ONLY",
+      "confidence": "high",
+      "evidence": [
+        {"url": "https://fred.stlouisfed.org/series/VXNCLS", "claim": "Cboe source, daily close, and FRED revision warning."},
+        {"url": "https://fred.stlouisfed.org/docs/api/fred/series_vintagedates.html", "claim": "FRED exposes vintage-date metadata, but the current capture does not archive those historical vintages."}
+      ],
+      "rule_version": "VXN_RULE_V1"
+    },
+    {
+      "series_id": "US10Y_REAL",
+      "provider": "Board of Governors of the Federal Reserve System via FRED",
+      "historical_source": "FRED DFII10 (H.15 Selected Interest Rates)",
+      "revision_behavior": "FRED page carries an all-data-subject-to-revision warning; current-history CSV is not a stored release vintage.",
+      "publication_semantics": "Daily H.15 series; the current collector does not prove when each historical value was first available to a decision maker.",
+      "market_close_semantics": "Not a market-close index. H.15 publication/update timing is separate from the Treasury observation date and is not inferred here.",
+      "vintage_support": "ALFRED can be queried in principle, but no per-vintage DFII10 response has been archived for the existing historical rows.",
+      "candidate_available_at_rule": "No historical promotion rule until a selected ALFRED vintage and a conservative publication-delay rule are archived for the observation; current history remains proxy.",
+      "can_upgrade_historical": false,
+      "classification": "PROXY_ONLY",
+      "confidence": "high",
+      "evidence": [
+        {"url": "https://fred.stlouisfed.org/series/DFII10", "claim": "Federal Reserve/H.15 source, daily frequency, and revision warning."},
+        {"url": "https://fred.stlouisfed.org/docs/api/fred/series_observations.html", "claim": "FRED documents vintage-date and real-time-period parameters needed for a future recovery job."}
+      ],
+      "rule_version": "US10Y_REAL_RULE_V1"
+    },
+    {
+      "series_id": "US_NFCI",
+      "provider": "Federal Reserve Bank of Chicago via ALFRED/FRED",
+      "historical_source": "ALFRED NFCI vintage response, weekly ending Friday",
+      "revision_behavior": "FRED warns that the series is subject to revision; an ALFRED real-time period is required for a historical as-of view.",
+      "publication_semantics": "ALFRED vintage date identifies the real-time period requested, not an intraday release timestamp. FRED release-date documentation warns that source release dates do not necessarily equal website availability.",
+      "market_close_semantics": "Not a market-close series; observation is weekly ending Friday and should not be treated as a Friday-morning value.",
+      "vintage_support": "ALFRED CSV supports a selected vintage_date and the FRED page identifies weekly ending Friday frequency.",
+      "candidate_available_at_rule": "For a row with an archived ALFRED vintage_date, set available_at = vintage_date 00:00 UTC + 1 calendar day (conservative publication delay); never use the same-day morning value. Existing rows without a per-vintage raw response remain proxy.",
+      "can_upgrade_historical": true,
+      "classification": "ELIGIBLE_WITH_CONSERVATIVE_DELAY",
+      "confidence": "medium",
+      "evidence": [
+        {"url": "https://fred.stlouisfed.org/series/NFCI", "claim": "Chicago Fed source and weekly ending Friday frequency."},
+        {"url": "https://fred.stlouisfed.org/docs/api/fred/realtime_period.html", "claim": "ALFRED real-time periods represent information known by a past period."},
+        {"url": "https://fred.stlouisfed.org/docs/api/fred/releases_dates.html", "claim": "Published source release dates do not necessarily represent availability on FRED/ALFRED, motivating the conservative delay."},
+        {"url": "https://fred.stlouisfed.org/docs/api/fred/series_observations.html", "claim": "The API documents vintage_dates for retrieving history as of selected dates."}
+      ],
+      "rule_version": "NFCI_RULE_V1"
+    }
+  ]
+}

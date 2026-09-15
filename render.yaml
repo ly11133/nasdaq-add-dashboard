@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: nasdaq-add-dashboard-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    healthCheckPath: /api/status
+    envVars:
+      - key: CLOUD_MODE
+        value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: ALLOWED_ORIGINS
+        value: "https://ly11133.github.io"

@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Nasdaq-100 长期定投与回撤加仓判断仪表盘">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%230b6b58'/%3E%3Cpath d='M12 44h40M17 38V20m10 18V13m10 25V23m10 15V9' stroke='white' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>多标的加仓仪表盘</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #edf1ee;
+      --surface: #f8faf8;
+      --surface-raised: #ffffff;
+      --ink: #17241f;
+      --ink-soft: #33453d;
+      --muted: #66766e;
+      --rule: #cbd6cf;
+      --rule-strong: #9baea3;
+      --accent: #0b6b58;
+      --accent-strong: #07513f;
+      --accent-wash: #e3f0ea;
+      --warning: #9b671f;
+      --warning-wash: #f5ead3;
+      --danger: #a4473b;
+      --danger-wash: #f5e0dc;
+      --info: #3c6882;
+      --info-wash: #e5eef4;
+      --unknown: #66766e;
+      --unknown-wash: #e9eeeb;
+      --shadow: 0 8px 22px rgba(31, 55, 46, 0.06);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-7: 48px;
+      font-family: -apple-system, BlinkMacSystemFont, "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--canvas); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(11, 107, 88, 0.035) 1px, transparent 1px) 0 0 / 48px 48px,
+        var(--canvas);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    button, select, input { font: inherit; }
+    button, .button-like, select { min-height: 44px; }
+    button, .button-like {
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      color: var(--ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: 0 var(--space-4);
+      text-decoration: none;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+    }
+    button:hover, .button-like:hover {
+      border-color: var(--accent);
+      color: var(--accent-strong);
+      background: var(--accent-wash);
+    }
+    button:active, .button-like:active { transform: translateY(1px); }
+    button:focus-visible, .button-like:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid rgba(11, 107, 88, 0.28);
+      outline-offset: 2px;
+    }
+    button[disabled] { cursor: wait; opacity: 0.65; transform: none; }
+    a { color: var(--accent-strong); }
+    a:hover { color: var(--accent); }
+    .mono, .numeric, time, .score-number, .metric-value {
+      font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .app-shell { max-width: 1480px; margin: 0 auto; padding: 0 var(--space-5) var(--space-7); }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      min-height: 76px;
+      border-bottom: 1px solid var(--rule-strong);
+    }
+    .brand { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 46px;
+      height: 32px;
+      padding: 0 8px;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      color: var(--accent-strong);
+      font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .brand-name {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 21px;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+    .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+    .stamp { color: var(--muted); font-size: 12px; text-align: right; line-height: 1.35; }
+    .stamp strong { color: var(--ink-soft); font-weight: 600; }
+    .primary-action { border-color: var(--accent); background: var(--accent); color: white; }
+    .primary-action:hover { border-color: var(--accent-strong); background: var(--accent-strong); color: white; }
+    .import-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .section-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: var(--space-3) 0 0;
+    }
+    .section-nav-links { display: flex; align-items: center; gap: var(--space-1); }
+    .section-nav button {
+      min-height: 34px;
+      padding: 0 var(--space-3);
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .section-nav button:hover { border-color: var(--rule); background: var(--surface); color: var(--accent-strong); }
+    .section-nav button.is-active { border-color: var(--rule-strong); background: var(--surface); color: var(--accent-strong); font-weight: 700; }
+    .section-nav-note { color: var(--muted); font-size: 11px; }
+    .target-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      min-height: 48px;
+      margin-top: var(--space-3);
+      padding: 8px 12px;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      background: rgba(248, 250, 248, 0.72);
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+    .target-strip label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); white-space: nowrap; }
+    .target-strip select { min-height: 32px; padding: 0 28px 0 9px; border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--ink); font-weight: 650; }
+    .target-meta { color: var(--ink-soft); }
+    .auto-status { margin-left: auto; color: var(--muted); font-size: 11px; text-align: right; }
+    .point-in-time { margin-top: var(--space-4); padding: 9px 12px; border: 1px solid var(--rule); border-left: 3px solid var(--accent); background: rgba(227, 240, 234, 0.5); color: var(--muted); font-size: 11px; line-height: 1.55; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr) 330px;
+      gap: var(--space-5);
+      align-items: start;
+      padding-top: var(--space-5);
+    }
+    .decision-rail {
+      position: sticky;
+      top: var(--space-4);
+      background: var(--surface);
+      border: 1px solid var(--rule-strong);
+      border-top: 4px solid var(--accent);
+      border-radius: var(--radius-md);
+      padding: var(--space-5);
+      box-shadow: var(--shadow);
+    }
+    .eyebrow, .section-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      line-height: 1.3;
+    }
+    .eyebrow { text-transform: uppercase; }
+    .rail-status {
+      margin: var(--space-3) 0 var(--space-2);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 30px;
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+    }
+    .rail-status.status-watch { color: var(--warning); }
+    .rail-status.status-support { color: var(--accent-strong); }
+    .rail-status.status-unknown { color: var(--ink-soft); }
+    .rail-status.status-hold { color: var(--danger); }
+    .rail-status.status-stale { color: var(--muted); }
+    .execution-badge, .execution-result {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .execution-badge { margin: 0 0 var(--space-3); padding: 5px 9px; background: var(--unknown-wash); color: var(--unknown); }
+    .execution-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .execution-badge.status-support, .execution-result.status-support { color: var(--accent-strong); }
+    .execution-badge.status-watch, .execution-result.status-watch { color: var(--warning); }
+    .execution-badge.status-hold, .execution-result.status-hold { color: var(--danger); }
+    .execution-badge.status-stale, .execution-result.status-stale { color: var(--muted); }
+    .execution-result { justify-content: flex-end; }
+    .rail-copy { margin: 0; color: var(--ink-soft); font-size: 13px; }
+    .score-readout { display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-6); }
+    .score-number { font-size: 37px; font-weight: 650; letter-spacing: -0.06em; }
+    .score-range { color: var(--muted); font-size: 12px; }
+    .score-track {
+      position: relative;
+      height: 10px;
+      margin: var(--space-3) 0 var(--space-2);
+      overflow: hidden;
+      border-radius: 99px;
+      background: #dce5df;
+    }
+    .score-known, .score-unknown {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      transition: width 220ms ease, left 220ms ease;
+    }
+    .score-known { left: 0; background: var(--accent); }
+    .score-unknown { background: repeating-linear-gradient(135deg, rgba(102, 118, 110, 0.3) 0 4px, rgba(102, 118, 110, 0.08) 4px 8px); }
+    .score-thresholds { position: relative; height: 14px; margin-top: -2px; color: var(--muted); font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 9px; }
+    .score-thresholds span { position: absolute; top: 0; transform: translateX(-50%); }
+    .score-thresholds span::before { content: ""; position: absolute; left: 50%; top: -7px; width: 1px; height: 5px; background: var(--rule-strong); }
+    .score-legend, .rail-meta { display: flex; justify-content: space-between; gap: var(--space-3); color: var(--muted); font-size: 11px; }
+    .rail-meta strong { color: var(--ink); font-size: 14px; }
+    .rail-divider { height: 1px; margin: var(--space-5) 0; background: var(--rule); }
+    .case-label { display: block; margin-bottom: var(--space-2); color: var(--muted); font-size: 12px; }
+    .case-select { width: 100%; padding: 0 var(--space-3); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--ink); }
+    .rail-note { margin: var(--space-5) 0 0; padding-top: var(--space-4); border-top: 1px solid var(--rule); color: var(--muted); font-size: 12px; }
+    .rail-note strong { color: var(--ink-soft); font-weight: 650; }
+
+    .main-column, .evidence-column { min-width: 0; }
+    .main-column { display: flex; flex-direction: column; gap: var(--space-5); }
+    .evidence-column { display: flex; flex-direction: column; gap: var(--space-4); }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow);
+    }
+    .panel-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-5) 0;
+    }
+    .panel-heading h2, .panel-heading h3 { margin: 0; font-size: 16px; line-height: 1.3; }
+    .panel-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+    .hero-panel { padding: var(--space-6); border-top: 4px solid var(--accent); }
+    .hero-kicker { color: var(--accent-strong); font-size: 12px; font-weight: 700; }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(240px, .85fr); gap: var(--space-6); align-items: start; margin-top: var(--space-2); }
+    .hero-grid h1 {
+      margin: 0;
+      max-width: 28ch;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(30px, 3.2vw, 46px);
+      line-height: 1.06;
+      letter-spacing: -0.045em;
+      overflow-wrap: normal;
+      word-break: normal;
+    }
+    .hero-grid p { max-width: 58ch; margin: var(--space-4) 0 0; color: var(--ink-soft); font-size: 15px; }
+    .hero-result { min-width: 0; padding-left: var(--space-5); border-left: 1px solid var(--rule); text-align: right; }
+    .hero-result .section-label { display: block; margin-bottom: var(--space-2); }
+    .hero-result strong { display: block; color: var(--warning); font-family: Georgia, "Times New Roman", serif; font-size: 24px; line-height: 1.15; }
+    .hero-result small { display: block; margin-top: var(--space-2); color: var(--muted); font-size: 12px; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-5); }
+    .hero-actions button { min-height: 38px; padding: 0 var(--space-3); font-size: 12px; }
+    .hero-actions .quiet-action { border-color: var(--rule); background: transparent; }
+    .signal-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin-top: var(--space-6); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+    .signal { padding: var(--space-4) var(--space-4) var(--space-3); border-right: 1px solid var(--rule); }
+    .signal:last-child { border-right: 0; }
+    .signal-label { display: block; color: var(--muted); font-size: 11px; }
+    .signal-value { display: block; margin-top: var(--space-1); font-size: 17px; font-weight: 650; }
+    .signal-note { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .state-positive { color: var(--accent-strong); }
+    .state-warning { color: var(--warning); }
+    .state-unknown { color: var(--unknown); }
+    .evidence-alert {
+      display: flex;
+      gap: var(--space-3);
+      align-items: flex-start;
+      margin-top: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border-left: 3px solid var(--warning);
+      background: var(--warning-wash);
+      color: #634416;
+      font-size: 12px;
+    }
+    .evidence-alert strong { color: #55370d; }
+
+    .market-panel { overflow: hidden; }
+    .metric-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .metric-cell { padding: var(--space-4) var(--space-5); border-top: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+    .metric-cell:last-child { border-right: 0; }
+    .metric-label { display: block; color: var(--muted); font-size: 11px; }
+    .metric-value { display: block; margin-top: var(--space-1); font-size: 22px; font-weight: 650; letter-spacing: -0.04em; }
+    .metric-foot { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+
+    .chart-panel { padding-bottom: var(--space-4); scroll-margin-top: var(--space-4); }
+    .chart-tools { display: flex; align-items: center; gap: var(--space-2); }
+    .range-button { min-height: 32px; padding: 0 var(--space-3); border-color: var(--rule); background: transparent; color: var(--muted); font-size: 11px; }
+    .range-button:hover { background: var(--accent-wash); }
+    .range-button.is-active { border-color: var(--accent); background: var(--accent-wash); color: var(--accent-strong); font-weight: 700; }
+    .chart-wrap { padding: var(--space-4) var(--space-5) 0; }
+    #priceChart { display: block; width: 100%; height: auto; min-height: 220px; overflow: visible; }
+    #priceChart .grid-line { stroke: var(--rule); stroke-width: 1; }
+    #priceChart .axis-label { fill: var(--muted); font-size: 11px; font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; }
+    #priceChart .price-line { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    #priceChart .price-area { fill: rgba(11, 107, 88, 0.08); stroke: none; }
+    #priceChart .ath-line { stroke: var(--warning); stroke-width: 1; stroke-dasharray: 5 5; opacity: 0.9; }
+    #priceChart .current-dot { fill: var(--surface-raised); stroke: var(--accent-strong); stroke-width: 3; }
+    #priceChart .ath-label { fill: var(--warning); font-size: 11px; font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; }
+    #priceChart .chart-hit { fill: transparent; stroke: transparent; cursor: crosshair; }
+    #priceChart .chart-hit:focus-visible { fill: rgba(11, 107, 88, 0.18); stroke: var(--accent-strong); stroke-width: 2; outline: none; }
+    .chart-readout { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin: var(--space-2) var(--space-5) 0; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--accent); background: var(--accent-wash); color: var(--ink-soft); font-size: 11px; }
+    .chart-readout strong { color: var(--accent-strong); font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+    .chart-caption { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0 var(--space-5); color: var(--muted); font-size: 11px; }
+
+    .logic-panel { padding-bottom: var(--space-5); }
+    .logic-list { display: grid; gap: var(--space-3); margin: var(--space-4) var(--space-5) 0; padding: 0; list-style: none; counter-reset: logic; }
+    .logic-list li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--space-3); align-items: start; padding-top: var(--space-3); border-top: 1px solid var(--rule); color: var(--ink-soft); font-size: 13px; }
+    .logic-list li::before { counter-increment: logic; content: counter(logic, decimal-leading-zero); color: var(--accent-strong); font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; }
+    .logic-list strong { color: var(--ink); font-weight: 650; }
+    .counter-note { margin: var(--space-5) var(--space-5) 0; padding-top: var(--space-4); border-top: 1px solid var(--rule); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+    .counter-copy { margin: var(--space-2) var(--space-5) 0; color: var(--ink-soft); font-size: 13px; }
+
+    .conditions-panel { padding-bottom: var(--space-5); }
+    .condition-list { display: grid; gap: var(--space-3); margin: var(--space-4) var(--space-5) 0; }
+    .condition { display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: var(--space-3); align-items: start; color: var(--ink-soft); font-size: 13px; }
+    .condition::before { content: ""; width: 9px; height: 9px; margin-top: 7px; border-radius: 50%; background: var(--rule-strong); }
+    .condition.support::before { background: var(--accent); }
+    .condition.watch::before { background: var(--warning); }
+    .condition strong { color: var(--ink); font-weight: 650; }
+
+    .module { overflow: hidden; scroll-margin-top: var(--space-4); }
+    .module > summary { list-style: none; cursor: pointer; }
+    .module > summary::-webkit-details-marker { display: none; }
+    .module > summary:focus-visible { outline: 3px solid rgba(11, 107, 88, 0.28); outline-offset: -3px; }
+    .module-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--rule); }
+    .module-head::after { content: "+"; flex: 0 0 auto; margin-left: auto; color: var(--muted); font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; line-height: 1.1; }
+    .module[open] .module-head::after { content: "−"; color: var(--accent-strong); }
+    .module-head h3 { margin: 0; font-size: 14px; line-height: 1.3; }
+    .module-head p { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .module-weight { color: var(--muted); font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; white-space: nowrap; }
+    .module-body { padding: var(--space-2) var(--space-4) var(--space-3); }
+    .data-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); align-items: baseline; padding: var(--space-2) 0; border-bottom: 1px solid rgba(203, 214, 207, 0.65); }
+    .data-row:last-child { border-bottom: 0; }
+    .data-row dt { color: var(--ink-soft); font-size: 12px; }
+    .data-row dd { margin: 0; color: var(--ink); font-size: 12px; font-weight: 650; text-align: right; }
+    .row-note { display: block; grid-column: 1 / -1; margin-top: -2px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .module-note { margin: var(--space-2) 0 0; padding-top: var(--space-2); border-top: 1px solid var(--rule); color: var(--muted); font-size: 11px; }
+    .status-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 7px; border-radius: 99px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .status-scored { color: var(--accent-strong); background: var(--accent-wash); }
+    .status-partial { color: var(--info); background: var(--info-wash); }
+    .status-candidate { color: #6e4814; background: var(--warning-wash); }
+    .status-missing { color: var(--danger); background: var(--danger-wash); }
+    .status-context { color: var(--info); background: var(--info-wash); }
+    .status-unknown { color: var(--unknown); background: var(--unknown-wash); }
+
+    .score-ledger { overflow: hidden; }
+    .score-ledger { scroll-margin-top: var(--space-4); }
+    .score-ledger-head { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--rule); }
+    .score-ledger-head h2 { margin: 0; font-size: 16px; }
+    .score-ledger-head p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .ledger-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--rule); background: rgba(227, 240, 234, 0.35); }
+    .filter-group { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+    .filter-button { min-height: 30px; padding: 0 var(--space-2); border-color: transparent; background: transparent; color: var(--muted); font-size: 11px; }
+    .filter-button:hover { border-color: var(--rule); background: var(--surface-raised); }
+    .filter-button.is-active { border-color: var(--rule-strong); background: var(--surface-raised); color: var(--accent-strong); font-weight: 700; }
+    .ledger-count { color: var(--muted); font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; white-space: nowrap; }
+    .score-row { display: grid; grid-template-columns: 90px minmax(0, 1fr) 92px; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--rule); }
+    .score-row:last-child { border-bottom: 0; }
+    .score-row-label strong { display: block; font-size: 13px; }
+    .score-row-label span { display: block; margin-top: 2px; color: var(--muted); font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; }
+    .score-row-main { min-width: 0; }
+    .score-row-main p { overflow: hidden; margin: 0; color: var(--ink-soft); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .score-row-bar { height: 5px; margin-top: 6px; overflow: hidden; border-radius: 99px; background: var(--unknown-wash); }
+    .score-row-bar span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+    .score-row-value { text-align: right; }
+    .score-row-value strong { display: block; font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .score-row-value .status-badge { margin-top: 3px; }
+
+    .sources-panel { padding-bottom: var(--space-4); }
+    .source-list { margin: var(--space-3) var(--space-4) 0; }
+    .source-row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+    .source-row:last-child { border-bottom: 0; }
+    .source-row a { display: block; overflow: hidden; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .source-meta { margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .source-status { align-self: start; }
+    .rules { margin: var(--space-4); border-top: 1px solid var(--rule); }
+    .rules summary { cursor: pointer; padding: var(--space-3) 0; color: var(--accent-strong); font-size: 12px; font-weight: 700; }
+    .rule-grid { display: grid; gap: var(--space-2); padding: 0 0 var(--space-2); }
+    .rule-item { display: flex; justify-content: space-between; gap: var(--space-3); color: var(--ink-soft); font-size: 11px; }
+    .rule-item strong { color: var(--ink); font-weight: 650; text-align: right; }
+    .source-foot { margin: var(--space-3) var(--space-4) 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .sources-panel { scroll-margin-top: var(--space-4); }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-top: var(--space-6);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--rule-strong);
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .footer p { margin: 0; max-width: 80ch; }
+    .toast {
+      position: fixed;
+      right: var(--space-5);
+      bottom: var(--space-5);
+      z-index: 10;
+      max-width: min(380px, calc(100vw - 32px));
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      box-shadow: var(--shadow);
+      color: var(--ink-soft);
+      font-size: 12px;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .empty-state { padding: var(--space-5); color: var(--muted); font-size: 13px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 1180px) {
+      .dashboard { grid-template-columns: 224px minmax(0, 1fr); }
+      .evidence-column { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+      .sources-panel { grid-column: 1 / -1; }
+    }
+    @media (max-width: 760px) {
+      .app-shell { padding: 0 var(--space-4) var(--space-6); }
+      .topbar { align-items: flex-start; flex-direction: column; padding: var(--space-4) 0; }
+      .top-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+      .stamp { text-align: left; }
+      .section-nav { align-items: flex-start; flex-direction: column; gap: var(--space-2); }
+      .section-nav-links { width: 100%; justify-content: space-between; }
+      .section-nav button { flex: 1; }
+      .section-nav-note { padding-left: var(--space-2); }
+      .dashboard { display: block; padding-top: var(--space-4); }
+      .decision-rail { position: static; margin-bottom: var(--space-4); }
+      .main-column { gap: var(--space-4); }
+      .evidence-column { display: block; margin-top: var(--space-4); }
+      .evidence-column .module, .sources-panel { margin-bottom: var(--space-4); }
+      .hero-panel { padding: var(--space-5) var(--space-4); }
+      .hero-grid { grid-template-columns: 1fr; gap: var(--space-4); }
+      .hero-grid h1 { max-width: 13ch; font-size: 38px; }
+      .hero-result { padding: var(--space-3) 0 0; border-top: 1px solid var(--rule); border-left: 0; text-align: left; }
+      .signal-strip, .metric-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .signal:nth-child(2), .metric-cell:nth-child(2) { border-right: 0; }
+      .signal:nth-child(n+3), .metric-cell:nth-child(n+3) { border-top: 1px solid var(--rule); }
+      .score-row { grid-template-columns: 82px minmax(0, 1fr); }
+      .score-row-value { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); text-align: left; }
+      .score-row-value .status-badge { margin-top: 0; }
+      .footer { flex-direction: column; }
+    }
+    @media (max-width: 420px) {
+      body { font-size: 14px; }
+      .brand-name { font-size: 19px; }
+      .top-actions { align-items: stretch; }
+      .top-actions button, .top-actions .button-like { flex: 1; }
+      .signal, .metric-cell { padding-left: var(--space-3); padding-right: var(--space-3); }
+      .metric-value { font-size: 18px; }
+      .chart-wrap { padding-left: var(--space-3); padding-right: var(--space-3); }
+      .chart-readout { margin-left: var(--space-3); margin-right: var(--space-3); }
+      .chart-caption { margin: 0 var(--space-3); }
+      .panel-heading { padding-left: var(--space-4); padding-right: var(--space-4); }
+      .score-row { padding-left: var(--space-4); padding-right: var(--space-4); }
+      .ledger-toolbar { align-items: flex-start; flex-direction: column; padding-left: var(--space-4); padding-right: var(--space-4); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+    }
+  
+.source-row > div {min-width:0;max-width:100%}.source-meta,.source-row a {overflow-wrap:anywhere;word-break:break-word}.metric-cell {min-width:0;padding:16px}.score-row-main p {white-space:normal;overflow:visible}.section-nav {flex-wrap:wrap;gap:12px}
+.update-progress-panel {
+  margin-top: var(--space-4);
+  padding: 14px 16px 12px;
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: rgba(248, 250, 248, 0.9);
+  box-shadow: var(--shadow);
+}
+.update-progress-panel[data-state="error"] {
+  border-left-color: var(--danger);
+  background: var(--danger-wash);
+}
+.update-progress-panel[data-state="complete"] { border-left-color: var(--accent-strong); }
+.update-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.update-progress-title { margin: 2px 0 0; font-size: 15px; line-height: 1.3; }
+.update-progress-percent {
+  color: var(--accent-strong);
+  font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.update-progress-panel[data-state="error"] .update-progress-percent { color: var(--danger); }
+.update-progress-track {
+  height: 10px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #dce5df;
+}
+.update-progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 220ms ease, background-color 140ms ease;
+}
+.update-progress-panel[data-state="error"] .update-progress-fill { background: var(--danger); }
+.update-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.update-progress-details {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+.update-progress-details summary {
+  cursor: pointer;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+.update-progress-details p { margin: 7px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.metric-guide { padding: 24px; }
+.guide-row { display:grid; grid-template-columns: minmax(130px,.7fr) 1.2fr 1fr 1fr; gap:18px; padding:18px 0; border-top:1px solid var(--rule); align-items:start; }
+.guide-row:first-child { border-top:0; }
+.guide-name strong { display:block; font-size:15px; }
+.guide-name span { color:var(--muted); font-size:11px; }
+.guide-cell b { display:block; color:var(--ink); font-size:11px; letter-spacing:.05em; margin-bottom:5px; }
+.guide-cell p { margin:0; color:var(--muted); font-size:13px; line-height:1.65; }
+.qualification-note { margin:18px 24px; padding:16px 18px; border-left:3px solid var(--warning); background:rgba(166,112,29,.06); }
+.qualification-note p { margin:7px 0 0; font-size:13px; line-height:1.75; color:var(--muted); }
+.rough-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:1px solid var(--rule); border-left:1px solid var(--rule); margin-top:16px; }
+.rough-card { padding:18px; border-right:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+.rough-card strong { display:block; font-size:25px; margin:7px 0; }
+.rough-card p { font-size:12px; line-height:1.65; color:var(--muted); margin:4px 0; }
+
+/* Desktop app shell: the section rail is the primary navigation. */
+.section-nav {
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 36px;
+  padding-top: 8px;
+}
+.section-nav-links { display: none; }
+.section-nav-note { margin-left: 4px; }
+.utility-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.utility-actions a { font-size: 12px; font-weight: 650; }
+
+.app-sidebar-nav {
+  display: grid;
+  gap: 3px;
+  margin: -4px -4px var(--space-5);
+  padding: 0 0 var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+.app-sidebar-kicker {
+  margin: 0 8px 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.app-nav-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-align: left;
+}
+.app-nav-item:hover { border-color: var(--rule); background: var(--surface-raised); color: var(--accent-strong); }
+.app-nav-item.is-active {
+  border-color: var(--rule);
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+.app-nav-item.is-active::before {
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  content: "";
+}
+.app-nav-index {
+  color: var(--muted);
+  font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-align: center;
+}
+.app-nav-item.is-active .app-nav-index { color: var(--accent-strong); }
+
+.page-heading {
+  padding: 2px 4px 0;
+  scroll-margin-top: var(--space-4);
+}
+.page-heading h1 {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(26px, 2.6vw, 36px);
+  line-height: 1.12;
+  letter-spacing: -.035em;
+}
+.page-heading p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+
+.dashboard.page-no-evidence { grid-template-columns: 248px minmax(0, 1fr); }
+.dashboard.page-no-evidence .evidence-column { display: none; }
+.evidence-column [data-page][hidden] { display: none; }
+[data-page][hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">ADD</span>
+        <span class="brand-name">加仓仪表盘</span>
+      </div>
+      <div class="top-actions">
+        <div class="stamp" id="headerStamp">数据读取中…</div>
+        <button type="button" class="primary-action" id="refreshButton">联网更新</button>
+        <label class="button-like" for="importInput">导入原始证据
+          <input id="importInput" class="import-input" type="file" accept=".json,.csv,application/json,text/csv">
+        </label>
+      </div>
+    </header>
+    <nav class="section-nav" aria-label="页面定位">
+      <div class="section-nav-links">
+        <button type="button" class="is-active" data-scroll-target="overview">总览</button>
+        <button type="button" data-scroll-target="triggerSection">回撤触发</button>
+        <button type="button" data-scroll-target="tacticalSection">周期研究</button>
+        <button type="button" data-scroll-target="capitalSection">资金压力</button>
+        <button type="button" data-scroll-target="stateMachineSection">资金状态</button>
+        <button type="button" data-scroll-target="realWorldSection">现实参数</button>
+        <button type="button" data-scroll-target="evidenceSection">证据核验</button>
+        <button type="button" data-scroll-target="guideSection">指标说明</button>
+        <button type="button" data-scroll-target="scoreSection">评分账本</button>
+        <button type="button" data-scroll-target="sourcesSection">数据台账</button>
+      </div>
+      <div class="utility-actions"><button id="exportJson" class="quiet-action">导出 JSON</button><button id="exportCsv" class="quiet-action">导出 CSV</button><button id="exportReport" class="quiet-action">导出报告</button><a href="evidence-template.json" download>JSON 模板</a><a href="evidence-template.csv" download>CSV 模板</a></div><span class="section-nav-note">每周完整评估 · 缺失项不插值</span>
+    </nav>
+
+    <div class="target-strip" aria-label="当前标的与数据节奏">
+      <label for="instrumentSelect">当前标的 <select id="instrumentSelect" aria-label="当前标的"><option>Nasdaq-100 · NDX</option></select></label>
+      <span class="target-meta" id="targetMeta">正在读取标的口径…</span>
+      <span class="auto-status" id="autoStatus">正在检查数据新鲜度…</span>
+    </div>
+    <section class="update-progress-panel" id="updateProgressPanel" hidden role="status" aria-live="polite" aria-labelledby="updateProgressTitle">
+      <div class="update-progress-head">
+        <div>
+          <div class="section-label">联网更新</div>
+          <h2 class="update-progress-title" id="updateProgressTitle">正在准备更新</h2>
+        </div>
+        <span class="update-progress-percent" id="updateProgressValue">0%</span>
+      </div>
+      <div class="update-progress-track" id="updateProgressTrack" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="正在准备更新，0%">
+        <span class="update-progress-fill" id="updateProgressFill"></span>
+      </div>
+      <div class="update-progress-meta">
+        <span id="updateProgressStage">等待开始</span>
+        <span id="updateProgressElapsed">已用 0 秒</span>
+      </div>
+      <details class="update-progress-details">
+        <summary>查看当前处理项</summary>
+        <p id="updateProgressMessage">更新任务尚未开始。</p>
+        <p id="updateProgressSource"></p>
+      </details>
+    </section>
+    <details class="profile-method" style="margin-top:12px;padding:0 12px;border:1px solid #cbd6cf;border-radius:6px;background:rgba(248,250,248,.58)">
+      <summary style="padding:10px 0;cursor:pointer;font-size:12px;color:#33453d">不同标的怎么计算？</summary>
+      <div style="padding:0 0 12px;font-size:12px;line-height:1.75;color:#66766e">
+        <p style="margin:0 0 7px"><strong>统一规则：</strong>先以所选价格代理截至评估日的最高收盘计算回撤；每跨过 10%、20%、30% 等一档，只启动一次证据核查。价格触发不等于通过，也不读取本金、仓位或加仓金额。</p>
+        <p style="margin:0 0 7px"><strong>固定权重：</strong>估值 30 分（Forward PE 20、TTM PE 10），盈利 25 分（同财政期 EPS 修正 15、下一财政年增长 10），价格压力 25 分（回撤 20、波动率 5），宏观 10 分，宽度 5 分，技术 5 分。未知项保持未知，不重分配、不用 0 分假装反面证据。</p>
+        <p style="margin:0"><strong>标的边界：</strong>下拉框直接列出纳斯达克100、标普500、日经225、恒生、沪深300、上证综指、深证成指、创业板指，以及 COMEX 黄金连续合约。指数价格不含基金费用与分红再投资；黄金连续合约也不等同于现货金或某只黄金 ETF。</p>
+      </div>
+    </details>
+
+    <main class="dashboard">
+      <aside class="decision-rail" aria-labelledby="decisionRailTitle">
+        <nav class="app-sidebar-nav" aria-label="工作区页面">
+          <div class="app-sidebar-kicker">工作区</div>
+          <button type="button" class="app-nav-item is-active" data-page="overview" aria-current="page"><span class="app-nav-index" aria-hidden="true">01</span><span>总览</span></button>
+          <button type="button" class="app-nav-item" data-page="trigger"><span class="app-nav-index" aria-hidden="true">02</span><span>回撤触发</span></button>
+          <button type="button" class="app-nav-item" data-page="research"><span class="app-nav-index" aria-hidden="true">03</span><span>周期研究</span></button>
+          <button type="button" class="app-nav-item" data-page="capital"><span class="app-nav-index" aria-hidden="true">04</span><span>资金管理</span></button>
+          <button type="button" class="app-nav-item" data-page="evidence"><span class="app-nav-index" aria-hidden="true">05</span><span>证据核验</span></button>
+          <button type="button" class="app-nav-item" data-page="guide"><span class="app-nav-index" aria-hidden="true">06</span><span>指标说明</span></button>
+          <button type="button" class="app-nav-item" data-page="ledger"><span class="app-nav-index" aria-hidden="true">07</span><span>评分账本</span></button>
+        </nav>
+        <div class="eyebrow" id="decisionRailTitle">免费证据版 · 观察状态</div>
+        <div class="rail-status status-unknown" id="railStatus">暂无法判断</div>
+        <div class="execution-badge status-unknown" id="executionBadge">等待证据</div>
+        <p class="rail-copy" id="railCopy">正在检查证据覆盖。</p>
+        <details style="margin:20px 0"><summary style="cursor:pointer;font-size:13px">研究代理评分参考（非 STRICT PIT）</summary><div class="score-readout">
+          <span class="score-number" id="knownScore">—</span>
+          <span class="score-range" id="scoreRange">区间读取中</span>
+        </div>
+        <div class="score-track" aria-label="已知分数与未覆盖分数区间">
+          <span class="score-known" id="scoreKnownBar" style="width:0"></span>
+          <span class="score-unknown" id="scoreUnknownBar" style="left:0;width:0"></span>
+        </div>
+        <div class="score-thresholds" aria-hidden="true"><span style="left:40%">40</span><span style="left:60%">60</span><span style="left:75%">75</span></div>
+        <div class="score-legend"><span>已知分数</span><span>100</span></div>
+        <div class="rail-meta">
+          <span>研究代理覆盖</span>
+          <strong id="coverageLabel">—</strong>
+        </div>
+        <div class="rail-meta">
+          <span>本次评估</span>
+          <strong id="railDate">—</strong>
+        </div>
+        </details><div class="rail-divider"></div>
+        <label class="case-label" for="caseSelect">查看快照</label>
+        <select class="case-select" id="caseSelect" aria-label="选择要查看的市场快照">
+          <option>正在读取数据库</option>
+        </select>
+        <label for="asofDate" style="display:block;margin-top:20px">评估日期（收盘后）</label><input id="asofDate" type="date" min="1986-01-01" style="width:100%;padding:10px;margin:8px 0"><p style="font-size:12px">选择日期后点「联网更新」。历史查询不等于完全无前视回测。</p><p class="rail-note"><strong>使用边界</strong><br>不读取你的本金、仓位或加仓金额；不产生自动买卖指令。评分缺失时显示区间，不用猜测补齐。</p>
+      </aside>
+
+      <section class="main-column" aria-label="市场判断">
+        <header class="page-heading" id="pageHeading" hidden>
+          <div class="eyebrow" id="pageHeadingKicker">工作区</div>
+          <h1 id="pageHeadingTitle">总览</h1>
+          <p id="pageHeadingCopy">用一屏查看价格压力、市场读数和最新判断。</p>
+        </header>
+        <section class="panel hero-panel" id="overview" data-page="overview" aria-labelledby="heroTitle">
+          <div class="hero-kicker" id="heroKicker">最新可用快照</div>
+          <div class="hero-grid">
+            <div>
+              <h1 id="heroTitle">正在读取证据</h1>
+              <p id="heroCopy">估值和同口径盈利修正仍未达到可评分标准。当前页面把已知信号与缺口分开呈现，避免把“跌了很多”误当成完整的加仓理由。</p>
+            </div>
+            <div class="hero-result">
+              <span class="section-label">机会观察状态</span>
+              <strong id="heroResult">暂无法判断</strong>
+              <small id="heroResultNote">证据完整后判断</small>
+            </div>
+          </div>
+          <div class="signal-strip" aria-label="结论摘要">
+            <div class="signal">
+              <span class="signal-label">价格压力</span>
+              <strong class="signal-value state-warning" id="signalDrawdown">—</strong>
+              <span class="signal-note" id="signalDrawdownNote">距历史高点</span>
+            </div>
+            <div class="signal">
+              <span class="signal-label">短期动量</span>
+              <strong class="signal-value state-unknown" id="signalRsi">—</strong>
+              <span class="signal-note" id="signalRsiNote">RSI(14)</span>
+            </div>
+            <div class="signal">
+              <span class="signal-label">核心盈利证据</span>
+              <strong class="signal-value state-unknown" id="signalEarnings">缺失</strong>
+              <span class="signal-note">同财政期 EPS 修正</span>
+            </div>
+            <div class="signal">
+              <span class="signal-label">估值证据</span>
+              <strong class="signal-value state-warning" id="signalValuation">待核验</strong>
+              <span class="signal-note">历史分位待核</span>
+            </div>
+          </div>
+          <div class="evidence-alert" id="evidenceAlert" role="status">
+            <span aria-hidden="true">●</span>
+            <span><strong>评分状态：</strong><span id="alertCopy">正在载入证据覆盖范围。</span></span>
+          </div>
+          <div class="point-in-time" id="pointInTime" role="note">时点边界正在载入；未来记录不会用于本次评估。</div>
+          <div class="hero-actions">
+            <button type="button" class="quiet-action" id="missingAction">只看缺口</button>
+            <button type="button" class="quiet-action" data-scroll-target="scoreSection">打开评分账本</button>
+            <button type="button" class="quiet-action" data-scroll-target="sourcesSection">查看数据来源</button>
+          </div>
+        </section>
+
+        <section class="panel" id="triggerSection" data-page="trigger" style="padding:24px" aria-labelledby="triggerTitle">
+          <div class="panel-heading"><h2 id="triggerTitle">第一步 · 回撤触发验证</h2><p>每深入10%一档，触发后再核查证据</p></div>
+          <p id="triggerSummary" style="font-size:16px;line-height:1.8;margin:16px 0"></p>
+          <div id="triggerLevels"></div>
+          <p id="triggerNote" style="font-size:12px;line-height:1.7;margin:12px 0"></p>
+          <details><summary style="cursor:pointer">查看本轮与近期触发记录</summary><div id="triggerEvents" style="font-size:13px;line-height:1.8;margin-top:12px"></div></details>
+          <details style="margin-top:16px"><summary style="cursor:pointer">算一下自己的高点和当前点位（仅演算）</summary><div style="display:flex;gap:16px;flex-wrap:wrap;margin:14px 0"><label>最高收盘 <input id="exampleHigh" type="number" min="1" step="0.01" style="width:120px;padding:8px"></label><label>当前点位 <input id="examplePrice" type="number" min="1" step="0.01" style="width:120px;padding:8px"></label></div><p id="exampleResult" role="status" style="font-size:14px;line-height:1.8"></p><p style="font-size:12px;margin-top:8px">此处不修改实际行情、评分、历史高点或触发记录。</p></details>
+        </section>
+        <section class="panel" id="tacticalSection" data-page="research" style="padding:24px" aria-labelledby="tacticalTitle">
+          <div class="panel-heading"><h2 id="tacticalTitle">研究验证 · 252 日 Tactical Cycle</h2><p>把长期历史高点与可重新武装的短周期分开观察</p></div>
+          <div id="tacticalStatus" class="evidence-alert" role="status"><span aria-hidden="true">●</span><span>正在读取 Phase 2E 研究结果…</span></div>
+          <div class="metric-strip" id="tacticalMetrics"></div>
+          <p id="tacticalDescription" style="font-size:13px;line-height:1.8;margin:16px 0">该模块只展示已完成的 NDX 研究回放，不读取本金、仓位或加仓金额，也不产生自动买入指令。</p>
+          <details><summary style="cursor:pointer">关键历史窗口与规则</summary><div id="tacticalWindows" style="font-size:13px;line-height:1.8;margin-top:12px"></div></details>
+        </section>
+        <section class="panel" id="capitalSection" data-page="capital" style="padding:24px" aria-labelledby="capitalTitle">
+          <div class="panel-heading"><h2 id="capitalTitle">资金压力研究 · Opportunity Fund</h2><p>只检验资金梯度能否活过多轮回撤，不读取你的本金或工资</p></div>
+          <div id="capitalStatus" class="evidence-alert" role="status"><span aria-hidden="true">●</span><span>正在读取 Phase 2F 资金压力结果…</span></div>
+          <div class="metric-strip" id="capitalMetrics"></div>
+          <div id="capitalLadders" style="margin-top:16px;overflow:auto"></div>
+          <p id="capitalDescription" style="font-size:13px;line-height:1.8;margin:16px 0">该模块使用 100 个标准 Opportunity Units；M 只是固定的无量纲补充尺度，不对应人民币。Core DCA 与 Opportunity Fund 永久分离。</p>
+          <details><summary style="cursor:pointer">压力路径、单位与执行边界</summary><div id="capitalPaths" style="font-size:13px;line-height:1.8;margin-top:12px"></div></details>
+        </section>
+        <section class="panel" id="stateMachineSection" data-page="capital" style="padding:24px" aria-labelledby="stateMachineTitle">
+          <div class="panel-heading"><h2 id="stateMachineTitle">Phase 3A · 资金状态机</h2><p>把 C / D 两套候选接入可重放的每日资金状态；只读、只模拟</p></div>
+          <div id="stateMachineStatus" class="evidence-alert" role="status"><span aria-hidden="true">●</span><span>正在读取 Phase 3A 状态机结果…</span></div>
+          <div class="metric-strip" id="stateMachineMetrics"></div>
+          <div id="stateMachinePreview" style="margin-top:16px"></div>
+          <div id="stateMachineAccounts" style="margin-top:16px"></div>
+          <details style="margin-top:16px"><summary style="cursor:pointer">状态字段与执行规则</summary><div id="stateMachineRules" style="font-size:13px;line-height:1.8;margin-top:12px"></div></details>
+        </section>
+        <section class="panel" id="realWorldSection" data-page="capital" style="padding:24px" aria-labelledby="realWorldTitle">
+          <div class="panel-heading"><h2 id="realWorldTitle">Phase 3B · 现实资金参数</h2><p>把收入、核心定投和 Opportunity Fund 放进同一套可重放现金流</p></div>
+          <div id="realWorldStatus" class="evidence-alert" role="status"><span aria-hidden="true">●</span><span>正在读取 Phase 3B 现实参数验证…</span></div>
+          <div class="metric-strip" id="realWorldMetrics"></div>
+          <div id="realWorldProfiles" style="margin-top:16px;overflow:auto"></div>
+          <div id="realWorldLadders" style="margin-top:16px;overflow:auto"></div>
+          <details style="margin-top:16px"><summary style="cursor:pointer">参数口径与压力测试边界</summary><div id="realWorldRules" style="font-size:13px;line-height:1.8;margin-top:12px"></div></details>
+          <div style="margin-top:18px;padding-top:16px;border-top:1px solid #d4ded7">
+            <h3 style="font-size:15px;margin:0 0 8px">个人参数情景预览</h3>
+            <p style="font-size:12px;line-height:1.7;margin:0 0 12px">只用于把你的输入代入现金流规则；不会读取、保存或修改本金、仓位，也不会产生交易指令。</p>
+            <form id="realWorldProfileForm" style="display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;align-items:end">
+              <label style="font-size:12px">Profile <select id="realWorldProfileSelect" style="display:block;width:100%;padding:8px"><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option><option value="P4">P4</option><option value="CUSTOM">自定义</option></select></label>
+              <label style="font-size:12px">月收入 <input id="realWorldIncome" type="number" min="0" step="0.01" value="8000" style="display:block;width:100%;padding:8px"></label>
+              <label style="font-size:12px">月 Core DCA <input id="realWorldCore" type="number" min="0" step="0.01" value="1000" style="display:block;width:100%;padding:8px"></label>
+              <label style="font-size:12px">月机会补充 <input id="realWorldRefill" type="number" min="0" step="0.01" value="500" style="display:block;width:100%;padding:8px"></label>
+              <label style="font-size:12px">初始机会现金 <input id="realWorldInitial" type="number" min="0" step="0.01" value="0" style="display:block;width:100%;padding:8px"></label>
+              <label style="font-size:12px">Target <select id="realWorldTarget" style="display:block;width:100%;padding:8px"><option value="F1">F1 · 3个月</option><option value="F2" selected>F2 · 6个月</option><option value="F3">F3 · 12个月</option><option value="F4">F4 · 100,000</option></select></label>
+              <label style="font-size:12px">Cap <select id="realWorldCap" style="display:block;width:100%;padding:8px"><option value="1">1.0×</option><option value="1.5" selected>1.5×</option><option value="2">2.0×</option></select></label>
+              <label style="font-size:12px">补充方式 <select id="realWorldRefillMode" style="display:block;width:100%;padding:8px"><option value="FIXED" selected>固定金额</option><option value="INCOME_LINKED">收入比例</option></select></label>
+              <label style="font-size:12px">收入比例 <select id="realWorldRatio" style="display:block;width:100%;padding:8px"><option value="0.05">5%</option><option value="0.1" selected>10%</option><option value="0.15">15%</option></select></label>
+              <label style="font-size:12px">Surplus <select id="realWorldSurplus" style="display:block;width:100%;padding:8px"><option value="S0" selected>S0 · 保留现金</option><option value="S1">S1 · 转入 Core 记录</option><option value="S2">S2 · 低风险占位</option></select></label>
+              <button type="submit" class="quiet-action" id="realWorldPreviewButton">预览这组参数</button>
+            </form>
+            <div id="realWorldProfilePreview" class="evidence-alert" role="status" style="margin-top:14px"><span aria-hidden="true">●</span><span>选择参数后点击预览；输入不会写入个人档案。</span></div>
+          </div>
+        </section>
+        <section class="panel" data-page="trigger" style="padding:24px" aria-labelledby="verificationTitle">
+          <div class="panel-heading"><h2 id="verificationTitle">第二步 · 是否通过加仓条件验证</h2><p>估值与盈利优先，宏观和技术辅助</p></div>
+          <p id="verificationState" style="font-size:20px;font-weight:600;margin:18px 0"></p><div id="verificationRows"></div><p id="verificationNote" style="font-size:12px;line-height:1.7;margin-top:14px"></p>
+        </section>
+        <section class="panel" data-page="evidence" style="padding:24px" aria-labelledby="freeTitle"><div class="panel-heading"><h2 id="freeTitle">支持、反对与未知</h2><p>不计票、不填补未知权重</p></div><div id="freeEvidence"></div><p id="freeBoundary" style="font-size:12px;color:#64766b;margin-top:16px"></p></section>
+        <section class="panel" id="roughSection" data-page="evidence" style="padding:24px" aria-labelledby="roughTitle"><div class="panel-heading"><h2 id="roughTitle">免费粗估 · 不进入严格评分</h2><p>当前预测快照会保存，逐步积累自己的时点历史</p></div><div id="roughEvidence"><p class="empty-state">当前标的没有可用的免费预测粗估。</p></div></section>
+        <section class="panel market-panel" data-page="overview" aria-labelledby="marketTitle">
+          <div class="panel-heading">
+            <h2 id="marketTitle">市场读数</h2>
+            <p>收盘数据，按各自最后观测日标注</p>
+          </div>
+          <div class="metric-strip" id="marketMetrics"></div>
+        </section>
+
+        <section class="panel chart-panel" data-page="overview" aria-labelledby="chartTitle">
+          <div class="panel-heading">
+            <h2 id="chartTitle">价格路径</h2>
+            <div class="chart-tools" aria-label="价格路径范围">
+              <button type="button" class="range-button" data-range="30">30 日</button>
+              <button type="button" class="range-button is-active" data-range="90">90 日</button>
+              <button type="button" class="range-button" data-range="180">180 日</button>
+              <button type="button" class="range-button" data-range="360">360 日</button>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <svg id="priceChart" viewBox="0 0 840 260" role="img" aria-labelledby="chartTitle chartDescription"></svg>
+            <p class="sr-only" id="chartDescription">当前标的最近一段价格路径，虚线表示历史高点。</p>
+          </div>
+          <input id="chartSlider" type="range" min="0" max="89" aria-label="选择交易日" style="width:100%;accent-color:#34715a"><div class="chart-readout" role="status" aria-live="polite"><span id="chartHoverDate">当前点</span><strong id="chartHoverValue">—</strong></div>
+          <div class="chart-caption"><span id="chartStart">—</span><span id="chartEnd">—</span><span id="chartSource">来源：FRED NASDAQ100</span></div>
+        </section>
+
+        <section class="panel metric-guide" id="guideSection" data-page="guide" aria-labelledby="guideTitle">
+          <div class="panel-heading"><h2 id="guideTitle">指标说明与读法</h2><p>含义、方向与例子；单项不直接等于加仓结论</p></div>
+          <div id="metricGuide"></div>
+        </section>
+
+        <section class="panel" id="evidenceSection" data-page="evidence" style="padding:24px" aria-labelledby="evidenceTitle">
+          <div class="panel-heading"><h2 id="evidenceTitle">核心证据 · 来源与变化</h2><p>已取得 ≠ 已获准评分</p></div>
+          <p style="font-size:13px;margin:12px 0">每条曲线只使用同一来源、同一口径。不同 PE 不拼接；未证明当时可用的观察分位不会进入总分。</p>
+          <div id="evidenceExplorer"></div>
+        </section>
+        <section class="panel logic-panel" data-page="evidence" aria-labelledby="logicTitle">
+          <div class="panel-heading">
+            <h2 id="logicTitle">为什么得到这个结论</h2>
+            <p>把指标关系翻译成可检查的理由</p>
+          </div>
+          <ol class="logic-list" id="logicList"></ol>
+          <div class="counter-note">反向证据</div>
+          <p class="counter-copy" id="counterCopy">—</p>
+        </section>
+
+        <section class="panel conditions-panel" data-page="evidence" aria-labelledby="conditionsTitle">
+          <div class="panel-heading">
+            <h2 id="conditionsTitle">下一次改变判断，需要看到什么</h2>
+            <p>只列可观察条件，不预测日期</p>
+          </div>
+          <div class="condition-list" id="conditionList"></div>
+        </section>
+
+        <section class="panel" data-page="evidence" style="padding:24px" aria-labelledby="scenarioTitle">
+          <h2 id="scenarioTitle">收益情景 · 假设计算</h2>
+          <p style="font-size:13px;margin:12px 0">不根据评分承诺收益。自行设定买入 PE、盈利增长和退出估值，查看持有期价格变化；不包含分红、费用和汇率。</p>
+          <div style="display:flex;flex-wrap:wrap;gap:12px">
+            <label>假设买入 PE <input id="entryPe" type="number" min="1" max="200" value="25" style="width:80px;padding:8px"></label>
+            <label>持有年数 <input id="holdYears" type="number" min="1" max="30" value="5" style="width:65px;padding:8px"></label>
+          </div>
+          <div id="scenarioTable" style="overflow:auto;margin-top:16px"></div>
+          <p style="font-size:12px;margin-top:10px">公式：期末/期初价格 = (1 + EPS 年增长率)^年数 × 期末 PE / 买入 PE。这是敏感性演算，默认 PE=25 是假设，不是当前估值。</p>
+        </section>
+        <section class="panel score-ledger" id="scoreSection" data-page="ledger" aria-labelledby="ledgerTitle">
+          <div class="score-ledger-head">
+            <h2 id="ledgerTitle">评分账本</h2>
+            <p>固定 V2 权重；未知项不重分配，分数区间代表证据缺口</p>
+          </div>
+          <div class="ledger-toolbar">
+            <div class="filter-group" aria-label="评分项筛选">
+              <button type="button" class="filter-button is-active" data-filter="all">全部</button>
+              <button type="button" class="filter-button" data-filter="scored">已计分</button>
+              <button type="button" class="filter-button" data-filter="candidate">观察值未获评分资格</button>
+              <button type="button" class="filter-button" data-filter="missing">缺失</button>
+            </div>
+            <span class="ledger-count" id="ledgerCount">—</span>
+          </div>
+          <details style="padding:18px 24px;border-bottom:1px solid #d4ded7"><summary style="cursor:pointer">这些权重和比例怎么算？</summary><p style="font-size:13px;line-height:1.8;margin-top:12px">估值30%（预期PE20、TTM PE10），盈利25%（同年度修正15、下一年度增长10），价格压力25%（回撤20、波动率5），宏观10%，宽度5%，技术5%。这是预先设定的判断权重，不是统计得出的最优比例，也不是盈利概率。</p><p style="font-size:13px;line-height:1.8;margin-top:12px">回撤既是启动验证的触发条件，也在原评分中占20分。例如回撤10%，贡献20×10%/40%=5分，同时启动验证。未知权重不重分配；覆盖40/100表示40分权重可算，不表示40%胜率。</p></details><div class="qualification-note"><strong>为什么有观察值却未计分？</strong><p>取到数值只是第一步。进入评分还要同时满足：来源和指数身份明确、同一口径至少60个月历史、观察足够新、能证明该数在评估日已经发布；市场宽度还要有当日成分股和完整分母。页面会保留观察值，但不会把后来修订的历史或当前成分股倒填到过去。可以通过合格的逐期原始数据解锁；免费公开源无法证明的部分会继续保持未计分。</p></div><div id="scoreRows"></div>
+        </section>
+      </section>
+
+      <aside class="evidence-column" aria-label="证据详情">
+        <details class="panel module" id="module-valuation" data-page="evidence" open aria-labelledby="valuationTitle">
+          <summary class="module-head"><div><h3 id="valuationTitle">估值</h3><p>Forward PE、TTM PE、盈利收益率</p></div><span class="module-weight">30 分</span></summary>
+          <div class="module-body" id="valuationBody"></div>
+        </details>
+        <details class="panel module" id="module-earnings" data-page="evidence" open aria-labelledby="earningsTitle">
+          <summary class="module-head"><div><h3 id="earningsTitle">盈利</h3><p>同财政期 EPS 修正与增长</p></div><span class="module-weight">25 分</span></summary>
+          <div class="module-body" id="earningsBody"></div>
+        </details>
+        <details class="panel module" id="module-pressure" data-page="evidence" open aria-labelledby="pressureTitle">
+          <summary class="module-head"><div><h3 id="pressureTitle">回撤与恐慌</h3><p>回撤 20 分，VXN 5 分</p></div><span class="module-weight">25 分</span></summary>
+          <div class="module-body" id="pressureBody"></div>
+        </details>
+        <details class="panel module" id="module-macro" data-page="evidence" open aria-labelledby="macroTitle">
+          <summary class="module-head"><div><h3 id="macroTitle">利率与金融条件</h3><p>10Y 实际利率、NFCI</p></div><span class="module-weight">10 分</span></summary>
+          <div class="module-body" id="macroBody"></div>
+        </details>
+        <details class="panel module" id="module-breadth" data-page="evidence" open aria-labelledby="breadthTitle">
+          <summary class="module-head"><div><h3 id="breadthTitle">市场宽度</h3><p>成分股站上 200 日均线比例</p></div><span class="module-weight">5 分</span></summary>
+          <div class="module-body" id="breadthBody"></div>
+        </details>
+        <details class="panel module" id="module-technical" data-page="evidence" open aria-labelledby="technicalTitle">
+          <summary class="module-head"><div><h3 id="technicalTitle">技术辅助</h3><p>RSI(14) 计分，MA200 解释</p></div><span class="module-weight">5 分</span></summary>
+          <div class="module-body" id="technicalBody"></div>
+        </details>
+        <section class="panel sources-panel" id="sourcesSection" data-page="ledger" aria-labelledby="sourcesTitle">
+          <div class="panel-heading"><h2 id="sourcesTitle">数据台账</h2><p id="sourceCount">—</p></div>
+          <details style="margin-bottom:16px"><summary>全部已取得指标与评分资格</summary><div id="auditValues"></div></details><div class="source-list" id="sourceList"></div>
+          <details class="rules">
+            <summary>查看固定规则与边界</summary>
+            <div class="rule-grid">
+              <div class="rule-item"><span>决策频率</span><strong>每周完整评估</strong></div>
+              <div class="rule-item"><span>历史分位</span><strong>此前 120 个月末，排除当前</strong></div>
+              <div class="rule-item"><span>60 分核心门槛</span><strong>估值与 EPS 修正缺一不可</strong></div>
+              <div class="rule-item"><span>高分限制</span><strong>证据不足不输出强加仓</strong></div>
+              <div class="rule-item"><span>异常盈利修正</span><strong>3 个月 ≤ −10% 时最多观察</strong></div>
+              <div class="rule-item"><span>缺失处理</span><strong>显示已知分数区间，不插值</strong></div>
+            </div>
+          </details>
+          <p class="source-foot">观察值、发布日和评分资格分开记录。公开网页的“更新时间”不等于历史数据当时的发布时间。</p>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <p>多标的加仓仪表盘 · 本地数据应用。它是证据整理和纪律提醒工具，不是收益承诺或自动交易系统。</p>
+      <p id="footerStatus">正在载入…</p>
+    </footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <noscript><p style="padding:24px;color:#a4473b">此仪表盘需要启用 JavaScript 才能显示快照和评分。</p></noscript>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# Runtime state is intentionally ephemeral on the free service.
+data/*.sqlite3
+data/*.sqlite3-*
+data/backups/
+dashboard_data/cache/
+dashboard_data/snapshots/
+__pycache__/
+*.py[cod]

@@ -1,0 +1,31 @@
+{
+  "model_version": "NDX_SCORE_V2.0",
+  "created_at": "2026-09-14T00:00:00Z",
+  "component_config": {
+    "forward_pe": {"formula": "20 × (1 − historical_percentile)", "module": "valuation", "weight": 20},
+    "ttm_pe": {"formula": "10 × (1 − historical_percentile)", "module": "valuation", "weight": 10},
+    "revision": {"formula": "revision >= 5%:15; >= 0%:10; >= -5%:5; otherwise:0", "module": "earnings", "weight": 15},
+    "growth": {"formula": "growth >= 15%:10; >= 5%:7; >= 0%:3; otherwise:0", "module": "earnings", "weight": 10},
+    "drawdown": {"formula": "20 × min(drawdown / 40%, 1)", "module": "pressure", "weight": 20},
+    "vxn": {"formula": "5 × historical_percentile", "module": "pressure", "weight": 5},
+    "real": {"formula": "5 × (1 − historical_percentile)", "module": "macro", "weight": 5},
+    "nfci": {"formula": "5 × (1 − historical_percentile)", "module": "macro", "weight": 5},
+    "breadth": {"formula": "5 × fraction_above_MA200", "module": "breadth", "weight": 5},
+    "rsi": {"formula": "5 × clip((50 − RSI14) / 20, 0, 1)", "module": "technical", "weight": 5},
+    "vix": {"formula": "0 (background only)", "module": "background", "weight": 0}
+  },
+  "weights": {"valuation": 30, "earnings": 25, "pressure": 25, "macro": 10, "breadth": 5, "technical": 5},
+  "thresholds": {"valuation_core": 15, "earnings_core": 15, "full_score": 100},
+  "gate_rules": {
+    "unknown_items": "remain unknown and do not get reweighted",
+    "full_decision": "only when coverage is 100",
+    "drawdown_trigger": "trigger review at each additional 10% drawdown"
+  },
+  "eligibility_rules": {
+    "as_of": "available_at <= as_of_datetime",
+    "valuation_history_months_min": 60,
+    "valuation_history_months_max": 120,
+    "eps_revision_same_fiscal_year": true,
+    "breadth_requires_complete_historical_membership": true
+  }
+}
